@@ -1,0 +1,12 @@
+<RCC>
+    <qresource prefix="/resources">
+        <file>SampleMap/samplemap.png</file>
+        <file>SampleMap/samplemap.tmx</file>
+        <file>SampleMap/yee.png</file>
+        <file>SampleMap/samplemap_tiled.png</file>
+        <file>SampleMap/alpha.png</file>
+        <file>SampleMap/alpha.tmx</file>
+        <file>SampleMap/alpha_object.txt</file>
+        <file>SampleMap/alpha-2.png</file>
+    </qresource>
+</RCC>
