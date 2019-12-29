@@ -16,12 +16,17 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    creature.cpp \
+    player.cpp \
     server.cpp \
     servermain.cpp \
     serverwindow.cpp \
     serverworker.cpp
 
 HEADERS += \
+    creature.h \
+    data_structs.h \
+    player.h \
     server.h \
     serverwindow.h \
     serverworker.h

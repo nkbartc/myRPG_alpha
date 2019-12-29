@@ -5,6 +5,9 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonValue>
+#include <QJsonArray>
+
+#include <iostream>
 
 Client::Client(QObject *parent)
     : QObject(parent)
@@ -77,6 +80,15 @@ void Client::jsonReceived(const QJsonObject &docObj)
         if (loginSuccess) {
             // we logged in succesfully and we notify it via the loggedIn signal
             emit loggedIn();
+            const QJsonValue allUserNamesVal = docObj.value(QLatin1String("allUserNames"));
+            const QJsonArray allUserNames_temp = allUserNamesVal.toArray();
+            QStringList allUserNames;
+            for (auto it = allUserNames_temp.begin(); it != allUserNames_temp.end(); ++it) {
+                allUserNames.push_back(it->toString());
+            }
+            const QJsonValue usernameVal = docObj.value(QLatin1String("username"));
+            // we notify of the new user via the userJoined signal
+            emit userJoined(usernameVal.toString(), allUserNames);
             return;
         }
         // the login attempt failed, we extract the reason of the failure from the JSON
@@ -99,8 +111,14 @@ void Client::jsonReceived(const QJsonObject &docObj)
         const QJsonValue usernameVal = docObj.value(QLatin1String("username"));
         if (usernameVal.isNull() || !usernameVal.isString())
             return; // the username was invalid so we ignore
+        const QJsonValue allUserNamesVal = docObj.value(QLatin1String("allUserNames"));
+        const QJsonArray allUserNames_temp = allUserNamesVal.toArray();
+        QStringList allUserNames;
+        for (auto it = allUserNames_temp.begin(); it != allUserNames_temp.end(); ++it) {
+            allUserNames.push_back(it->toString());
+        }
         // we notify of the new user via the userJoined signal
-        emit userJoined(usernameVal.toString());
+        emit userJoined(usernameVal.toString(), allUserNames);
     } else if (typeVal.toString().compare(QLatin1String("userdisconnected"), Qt::CaseInsensitive) == 0) { // A user left the chat
          // we extract the username of the new user
         const QJsonValue usernameVal = docObj.value(QLatin1String("username"));
@@ -108,6 +126,11 @@ void Client::jsonReceived(const QJsonObject &docObj)
             return; // the username was invalid so we ignore
         // we notify of the user disconnection the userLeft signal
         emit userLeft(usernameVal.toString());
+    } else if (typeVal.toString().compare(QLatin1String("charInfo"), Qt::CaseInsensitive) == 0) {
+        qDebug() << "Client::jsonReceived charInfo\n";
+        QJsonObject status = docObj.value(QLatin1String("status")).toObject();
+        qDebug() << "character: " + status.value("class").toString();
+        emit getPlayerStat(status);
     }
 }
 

@@ -12,6 +12,13 @@ ServerWorker::ServerWorker(QObject *parent)
     connect(m_serverSocket, QOverload<QAbstractSocket::SocketError>::of(&QAbstractSocket::error), this, &ServerWorker::error);
 }
 
+void ServerWorker::initPlayer(const QJsonObject &json) {
+    player = new Player(json);
+}
+
+void ServerWorker::getPlayerStat(const QJsonObject &json) {
+
+}
 
 bool ServerWorker::setSocketDescriptor(qintptr socketDescriptor)
 {
@@ -20,6 +27,8 @@ bool ServerWorker::setSocketDescriptor(qintptr socketDescriptor)
 
 void ServerWorker::sendJson(const QJsonObject &json)
 {
+    QJsonObject status = json.value(QLatin1String("status")).toObject();
+    qDebug() << "character: " + status.value("class").toString();
     const QByteArray jsonData = QJsonDocument(json).toJson();
     emit logMessage("Sending to " + userName() + " - " + QString::fromUtf8(jsonData));
     QDataStream socketStream(m_serverSocket);

@@ -107,6 +107,109 @@ void Server::stopServer()
     close();
 }
 
+void Server::getCharacter(ServerWorker *sender, const int userId) {
+    QSqlQuery qry;
+    qry.exec("select CharacterId from Character where UserId='"+ QString::number(userId) + "'");
+    qry.next();
+    // assume always the first character for testing.
+    QString charId = qry.value(0).toString();
+    qry.exec("select * from Character where CharacterId='"+ charId + "'");
+    qry.next();
+    QJsonObject message;
+    QJsonObject status;
+    // massge = {"type":"charInfo",
+    //           "status":{status}
+    //          }
+    qDebug() << "getCharacter start";
+    message["type"] = QStringLiteral("charInfo");
+    status["userId"] = qry.value("UserId").toInt();
+    status["characterId"] = qry.value("CharacterId").toInt();
+    qDebug() << "characterId: " + QString::number(qry.value("CharacterId").toInt());
+    status["class"] = qry.value("Class").toString();
+    qDebug() << "class: " + qry.value("Class").toString();
+    status["name"] = qry.value("Name").toString();
+    //  status_.time
+    status["lv"] = qry.value("Lv").toInt();
+    status["exp"] = qry.value("Exp").toInt();
+    status["reqExp"] = qry.value("Req_Exp").toInt();
+    status["fame"] = qry.value("Fame").toInt();
+    status["gold"] = qry.value("Gold").toInt();
+    status["diamond"] = qry.value("Diamond").toInt();
+    status["hp"] = qry.value("Hp").toInt();
+    status["atk"] = qry.value("Atk").toInt();
+    status["def"] = qry.value("Def").toInt();
+    status["mdef"] = qry.value("MDef").toInt();
+    status["speed"] = qry.value("Speed").toInt();
+    status["dodge"] = qry.value("Dodge").toInt();
+    status["ac"] = qry.value("Ac").toInt();
+    status["crit"] = qry.value("Crit").toInt();
+    status["block"] = qry.value("Block").toInt();
+    message["status"] = status;
+    qDebug() << "getCharacter end";
+    // status_gears implement them all later
+
+    sender->initPlayer(message);
+    sendJson(sender, message);
+}
+
+int Server::checkUserInfo(ServerWorker *sender, const QString newUserName, const QString newPassWord) {
+    QSqlQuery qry;
+    if(qry.exec("select UserId from UserInfo where UserName='"+ newUserName +
+                "' and password='"+ newPassWord + "'")) {
+        int count = 0;
+        while (qry.next()) {
+            count++;
+        }
+        if (count < 1) {
+            qDebug() << "Username or Password is incorrect";
+            QJsonObject message;
+            message["type"] = QStringLiteral("login");
+            message["success"] = false;
+            message["reason"] = QStringLiteral("Username or Password is incorrect");
+            sendJson(sender, message);
+            return -1;
+        }
+    }
+    if (newUserName.isEmpty())
+        return -1;
+    QJsonArray allUserNames;
+    for (ServerWorker *worker : qAsConst(m_clients)) {
+        allUserNames.push_back(worker->userName());
+        if (worker == sender)
+            continue;
+        if (worker->userName().compare(newUserName, Qt::CaseInsensitive) == 0) {
+            qDebug() << "User already logged in";
+            QJsonObject message;
+            message["type"] = QStringLiteral("login");
+            message["success"] = false;
+            message["reason"] = QStringLiteral("User already logged in");
+            sendJson(sender, message);
+            return -1;
+        }
+    }
+    qDebug() << "User successfully log in";
+    sender->setUserName(newUserName);
+    allUserNames.push_front(newUserName);
+    QJsonObject successMessage;
+    successMessage["type"] = QStringLiteral("login");
+    successMessage["success"] = true;
+    successMessage["allUserNames"] = allUserNames;
+    sendJson(sender, successMessage);
+    QJsonObject connectedMessage;
+    connectedMessage["type"] = QStringLiteral("newuser");
+    connectedMessage["username"] = newUserName;
+    connectedMessage["allUserNames"] = allUserNames;
+    broadcast(connectedMessage, sender);
+
+    // not sure if this works correctly
+    qry.first();
+    int userId = qry.value(0).toInt();
+    qDebug() << "userId: " + QString::number(userId);
+    qDebug() << qry.value(1).toString();
+    qDebug() << qry.value(2).toString();
+    return userId;
+}
+
 void Server::jsonFromLoggedOut(ServerWorker *sender, const QJsonObject &docObj)
 {
     Q_ASSERT(sender);
@@ -121,49 +224,12 @@ void Server::jsonFromLoggedOut(ServerWorker *sender, const QJsonObject &docObj)
         return;
     const QString newUserName = usernameVal.toString().simplified();
     const QString newPassWord = passwordVal.toString().simplified();
-    QSqlQuery qry;
 
-    if(qry.exec("select * from UserInfo where UserName='"+ newUserName +
-                "' and password='"+ newPassWord + "'")) {
-        int count = 0;
-        while (qry.next()) {
-            count++;
-        }
-        if (count < 1) {
-            qDebug() << "Username or Password is incorrect";
-            QJsonObject message;
-            message["type"] = QStringLiteral("login");
-            message["success"] = false;
-            message["reason"] = QStringLiteral("Username or Password is incorrect");
-            sendJson(sender, message);
-            return;
-        }
-    }
-    if (newUserName.isEmpty())
+    int userId = checkUserInfo(sender, newUserName, newPassWord);
+    if (userId < 0) {
         return;
-    for (ServerWorker *worker : qAsConst(m_clients)) {
-        if (worker == sender)
-            continue;
-        if (worker->userName().compare(newUserName, Qt::CaseInsensitive) == 0) {
-            qDebug() << "User already logged in";
-            QJsonObject message;
-            message["type"] = QStringLiteral("login");
-            message["success"] = false;
-            message["reason"] = QStringLiteral("User already logged in");
-            sendJson(sender, message);
-            return;
-        }
     }
-    qDebug() << "User successfully log in";
-    sender->setUserName(newUserName);
-    QJsonObject successMessage;
-    successMessage["type"] = QStringLiteral("login");
-    successMessage["success"] = true;
-    sendJson(sender, successMessage);
-    QJsonObject connectedMessage;
-    connectedMessage["type"] = QStringLiteral("newuser");
-    connectedMessage["username"] = newUserName;
-    broadcast(connectedMessage, sender);
+    getCharacter(sender, userId);
 }
 
 void Server::jsonFromLoggedIn(ServerWorker *sender, const QJsonObject &docObj)

@@ -57,7 +57,7 @@ private slots:
     void messageReceived(const QString &sender, const QString &text);
     void sendMessage();
     void disconnectedFromServer();
-    void userJoined(const QString &username);
+    void userJoined(const QString &username, const QStringList &allUserNames);
     void userLeft(const QString &username);
     void error(QAbstractSocket::SocketError socketError);
 
@@ -67,11 +67,13 @@ private slots:
     void on_pushButton_fight_clicked();
     void on_comboBox_selectMap_currentIndexChanged(const QString &arg1);
     void on_pushButton_clear_combat_clicked();
+    void getPlayerStat(const QJsonObject &json);
 
 private:
     Ui::ClientWindow *ui;
     Client *m_client;
     QStandardItemModel *m_chatModel;
+    QStandardItemModel *m_playerModel;
     QString m_lastUserName;
 
     QSqlQuery qry_;

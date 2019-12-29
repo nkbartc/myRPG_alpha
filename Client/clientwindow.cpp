@@ -6,13 +6,16 @@ ClientWindow::ClientWindow(QWidget *parent)
     , ui(new Ui::ClientWindow)
     , m_client(new Client(this))
     , m_chatModel(new QStandardItemModel(this))
+    , m_playerModel(new QStandardItemModel(this))
 {
     // set up of the .ui file
     ui->setupUi(this);
-    // the model for the messages will have 1 column
+    // the model for the messages and players will have 1 column
     m_chatModel->insertColumn(0);
-    // set the model as the data source vor the list view
+    m_playerModel->insertColumn(0);
+    // set the models as the data source for the list view
     ui->listView_chat->setModel(m_chatModel);
+    ui->listView_player->setModel(m_playerModel);
     // connect the signals from the chat client to the slots in this ui
     connect(m_client, &Client::connected, this, &ClientWindow::connectedToServer);
     connect(m_client, &Client::loggedIn, this, &ClientWindow::loggedIn);
@@ -22,6 +25,7 @@ ClientWindow::ClientWindow(QWidget *parent)
     connect(m_client, &Client::error, this, &ClientWindow::error);
     connect(m_client, &Client::userJoined, this, &ClientWindow::userJoined);
     connect(m_client, &Client::userLeft, this, &ClientWindow::userLeft);
+    connect(m_client, &Client::getPlayerStat, this, &ClientWindow::getPlayerStat);
     // connect the connect button to a slot that will attempt the connection
     connect(ui->pushButton_login, &QPushButton::clicked, this, &ClientWindow::attemptConnection);
     // connect the press of the enter while typing to the slot that sends the message
@@ -40,27 +44,28 @@ void ClientWindow::update() {
 
 }
 
-void ClientWindow::update_status_client() {
-//    ui->label_userId->setNum(player_->status_.userId);
-//    ui->label_class->setText(player_->status_.class_);
-//    ui->label_name->setText(player_->status_.name);
-//  //  player_.status_.time
-//    ui->label_lv->setNum(player_->status_.lv);
-//    ui->label_exp->setNum(player_->status_.exp);
-//    ui->label_reqExp->setNum(player_->status_.reqExp);
-//    ui->label_fame->setNum(player_->status_.fame);
-//    ui->label_gold->setNum(player_->status_.gold);
-//    ui->label_diamond->setNum(player_->status_.diamond);
-//    ui->label_hp->setNum(player_->status_.hp);
-//    ui->label_atk->setNum(player_->status_.atk);
-//    ui->label_def->setNum(player_->status_.def);
-//    ui->label_mdef->setNum(player_->status_.mdef);
-//    ui->label_speed->setNum(player_->status_.speed);
-//    ui->label_dodge->setNum(player_->status_.dodge);
-//    ui->label_ac->setNum(player_->status_.ac);
-//    ui->label_crit->setNum(player_->status_.crit);
-//    ui->label_block->setNum(player_->status_.block);
-//    // character's location
+void ClientWindow::getPlayerStat(const QJsonObject &json) {
+    qDebug() << "ClientWindow::getPlayerStat";
+    ui->label_userId->setNum(json.value("userId").toInt());
+    ui->label_class->setText(json.value("class").toString());
+    ui->label_name->setText(json.value("name").toString());
+  //  player_.status_.time
+    ui->label_lv->setNum(json.value("lv").toInt());
+    ui->label_exp->setNum(json.value("exp").toInt());
+    ui->label_reqExp->setNum(json.value("reqExp").toInt());
+    ui->label_fame->setNum(json.value("fame").toInt());
+    ui->label_gold->setNum(json.value("gold").toInt());
+    ui->label_diamond->setNum(json.value("diamond").toInt());
+    ui->label_hp->setNum(json.value("hp").toInt());
+    ui->label_atk->setNum(json.value("atk").toInt());
+    ui->label_def->setNum(json.value("def").toInt());
+    ui->label_mdef->setNum(json.value("mdef").toInt());
+    ui->label_speed->setNum(json.value("speed").toInt());
+    ui->label_dodge->setNum(json.value("dodge").toInt());
+    ui->label_ac->setNum(json.value("ac").toInt());
+    ui->label_crit->setNum(json.value("crit").toInt());
+    ui->label_block->setNum(json.value("block").toInt());
+    // character's location
 //    int map_id = player_->status_.location.first;
 //    int loc_x = player_->status_.location.second.first;
 //    int loc_y = player_->status_.location.second.second;
@@ -320,7 +325,7 @@ void ClientWindow::disconnectedFromServer()
     m_lastUserName.clear();
 }
 
-void ClientWindow::userJoined(const QString &username)
+void ClientWindow::userJoined(const QString &username, const QStringList &allUserNames)
 {
     // store the index of the new row to append to the model containing the messages
     const int newRow = m_chatModel->rowCount();
@@ -336,6 +341,15 @@ void ClientWindow::userJoined(const QString &username)
     ui->listView_chat->scrollToBottom();
     // reset the last printed username
     m_lastUserName.clear();
+
+    // listview_player
+    const int num_users = allUserNames.size();
+    m_playerModel->clear();
+    m_playerModel->insertColumn(0);
+    m_playerModel->insertRows(0, num_users);
+    for (int i = 0; i < num_users; ++i) {
+        m_playerModel->setData(m_playerModel->index(i, 0), allUserNames[i]);
+    }
 }
 void ClientWindow::userLeft(const QString &username)
 {
@@ -353,6 +367,7 @@ void ClientWindow::userLeft(const QString &username)
     ui->listView_chat->scrollToBottom();
     // reset the last printed username
     m_lastUserName.clear();
+
 }
 
 void ClientWindow::error(QAbstractSocket::SocketError socketError)

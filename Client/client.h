@@ -27,8 +27,9 @@ signals:
     void disconnected();
     void messageReceived(const QString &sender, const QString &text);
     void error(QAbstractSocket::SocketError socketError);
-    void userJoined(const QString &username);
+    void userJoined(const QString &username, const QStringList &allUserNames);
     void userLeft(const QString &username);
+    void getPlayerStat(const QJsonObject &docObj);
 private:
     QTcpSocket *m_clientSocket;
     bool m_loggedIn;

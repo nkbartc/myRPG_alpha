@@ -36,6 +36,8 @@ private:
     void jsonFromLoggedOut(ServerWorker *sender, const QJsonObject &doc);
     void jsonFromLoggedIn(ServerWorker *sender, const QJsonObject &doc);
     void sendJson(ServerWorker *destination, const QJsonObject &message);
+    int checkUserInfo(ServerWorker *sender, const QString newUserName, const QString newPassWord);
+    void getCharacter(ServerWorker *sender, const int userId);
 signals:
     void logMessage(const QString &msg);
     void stopAllClients();

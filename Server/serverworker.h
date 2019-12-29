@@ -4,6 +4,9 @@
 #include <QObject>
 #include <QTcpSocket>
 #include <QReadWriteLock>
+
+#include "player.h"
+class Player;
 class QJsonObject;
 class ServerWorker : public QObject
 {
@@ -15,6 +18,8 @@ public:
     QString userName() const;
     void setUserName(const QString &userName);
     void sendJson(const QJsonObject &json);
+    void initPlayer(const QJsonObject &json);
+    void getPlayerStat(const QJsonObject &json);
 public slots:
     void disconnectFromClient();
 private slots:
@@ -28,6 +33,7 @@ private:
     QTcpSocket *m_serverSocket;
     QString m_userName;
     mutable QReadWriteLock m_userNameLock;
+    Player *player;
 };
 
 #endif // SERVERWORKER_H
