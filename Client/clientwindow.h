@@ -19,6 +19,7 @@
 #include "client.h"
 #include <QStandardItemModel>
 #include <QMessageBox>
+#include <cmath>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class ClientWindow; }
@@ -40,7 +41,7 @@ public:
     void update_map();
     void update_stage(QString selected_map);
     void setup_tiled_map();
-    void move_click();
+//    void move_click();
     bool eventFilter(QObject *target, QEvent *event);
     // need more update functions (chat, more bag, etc)
 
@@ -62,12 +63,14 @@ private slots:
     void error(QAbstractSocket::SocketError socketError);
 
     // others
-    void on_pushButton_move_clicked();
+//    void on_pushButton_move_clicked();
     void on_pushButton_collect_clicked();
     void on_pushButton_fight_clicked();
     void on_comboBox_selectMap_currentIndexChanged(const QString &arg1);
     void on_pushButton_clear_combat_clicked();
     void getPlayerStat(const QJsonObject &json);
+    void getPlayerLoc(const QString loc_x, const QString loc_y);
+    void setupMap(const QString map);
 
 private:
     Ui::ClientWindow *ui;
@@ -75,6 +78,9 @@ private:
     QStandardItemModel *m_chatModel;
     QStandardItemModel *m_playerModel;
     QString m_lastUserName;
+
+    int cur_x;
+    int cur_y;
 
     QSqlQuery qry_;
     QGraphicsScene *scene;

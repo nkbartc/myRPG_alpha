@@ -16,6 +16,7 @@ public:
 public slots:
     void connectToServer(const QHostAddress &address, quint16 port);
     void login(const QList<QLineEdit *> &fields);
+    void sendCommand(const QJsonObject &command);
     void sendMessage(const QString &text);
     void disconnectFromHost();
 private slots:
@@ -30,6 +31,7 @@ signals:
     void userJoined(const QString &username, const QStringList &allUserNames);
     void userLeft(const QString &username);
     void getPlayerStat(const QJsonObject &docObj);
+    void getPlayerLoc(const QString loc_x, const QString loc_y);
 private:
     QTcpSocket *m_clientSocket;
     bool m_loggedIn;

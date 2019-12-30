@@ -28,6 +28,12 @@ Player::Player(const QJsonObject &json) {
     status_.ac = status.toObject().value("Ac").toInt();
     status_.crit = status.toObject().value("Crit").toInt();
     status_.block = status.toObject().value("Block").toInt();
+    // Location: typedef QPair<QString, QPair<int,int>> Location; // <map,<x,y>>
+    QString loc_map = status.toObject().value("Loc_map").toString();
+    int loc_x = status.toObject().value("Loc_x").toInt();
+    int loc_y = status.toObject().value("Loc_y").toInt();
+    Location location = qMakePair(loc_map, qMakePair(loc_x, loc_y));
+    status_.location = location;
     // status_gears implement them all later
 }
 
@@ -64,3 +70,8 @@ Player::Player(const QJsonObject &json) {
 //Status_player Player::get_status() {
 //    return status_;
 //}
+
+void Player::set_player_loc(QString loc_map, int loc_x, int loc_y) {
+    Location location = qMakePair(loc_map, qMakePair(loc_x, loc_y));
+    status_.location = location;
+}

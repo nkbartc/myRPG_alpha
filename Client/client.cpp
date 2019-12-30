@@ -42,6 +42,12 @@ void Client::login(const QList<QLineEdit *> &fields)
     }
 }
 
+void Client::sendCommand(const QJsonObject &command) {
+    QDataStream clientStream(m_clientSocket);
+    clientStream.setVersion(QDataStream::Qt_5_7);
+    clientStream << QJsonDocument(command).toJson();
+}
+
 void Client::sendMessage(const QString &text)
 {
     if (text.isEmpty())
@@ -67,6 +73,7 @@ void Client::jsonReceived(const QJsonObject &docObj)
 {
     // actions depend on the type of message
     const QJsonValue typeVal = docObj.value(QLatin1String("type"));
+    qDebug() << "type: " + typeVal.toString();
     if (typeVal.isNull() || !typeVal.isString())
         return; // a message with no type was received so we just ignore it
     if (typeVal.toString().compare(QLatin1String("login"), Qt::CaseInsensitive) == 0) { //It's a login message
@@ -127,10 +134,17 @@ void Client::jsonReceived(const QJsonObject &docObj)
         // we notify of the user disconnection the userLeft signal
         emit userLeft(usernameVal.toString());
     } else if (typeVal.toString().compare(QLatin1String("charInfo"), Qt::CaseInsensitive) == 0) {
-        qDebug() << "Client::jsonReceived charInfo\n";
         QJsonObject status = docObj.value(QLatin1String("status")).toObject();
-        qDebug() << "character: " + status.value("class").toString();
         emit getPlayerStat(status);
+    } else if (typeVal.toString().compare(QLatin1String("command"), Qt::CaseInsensitive) == 0) {
+        qDebug() << "receive command";
+        const QJsonValue actionVal = docObj.value("action");
+        if (actionVal.toString() == "move") {
+            qDebug() << "receive move command";
+            QString loc_x = QString::number(docObj.value("loc_x").toInt());
+            QString loc_y = QString::number(docObj.value("loc_y").toInt());
+            emit getPlayerLoc(loc_x, loc_y);
+        }
     }
 }
 

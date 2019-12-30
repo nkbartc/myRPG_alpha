@@ -19,7 +19,8 @@ public:
     void setUserName(const QString &userName);
     void sendJson(const QJsonObject &json);
     void initPlayer(const QJsonObject &json);
-    void getPlayerStat(const QJsonObject &json);
+    void sendPlayerStat(const QJsonObject &json);
+    void movePlayerLoc(const QJsonObject &json);
 public slots:
     void disconnectFromClient();
 private slots:

@@ -144,6 +144,9 @@ void Server::getCharacter(ServerWorker *sender, const int userId) {
     status["ac"] = qry.value("Ac").toInt();
     status["crit"] = qry.value("Crit").toInt();
     status["block"] = qry.value("Block").toInt();
+    status["loc_map"] = qry.value("Loc_map").toString();
+    status["loc_x"] = qry.value("Loc_x").toInt();
+    status["loc_y"] = qry.value("Loc_y").toInt();
     message["status"] = status;
     qDebug() << "getCharacter end";
     // status_gears implement them all later
@@ -236,21 +239,28 @@ void Server::jsonFromLoggedIn(ServerWorker *sender, const QJsonObject &docObj)
 {
     Q_ASSERT(sender);
     const QJsonValue typeVal = docObj.value(QLatin1String("type"));
-    if (typeVal.isNull() || !typeVal.isString())
+    if (typeVal.isNull() || !typeVal.isString()) {
         return;
-    if (typeVal.toString().compare(QLatin1String("message"), Qt::CaseInsensitive) != 0)
-        return;
-    const QJsonValue textVal = docObj.value(QLatin1String("text"));
-    if (textVal.isNull() || !textVal.isString())
-        return;
-    const QString text = textVal.toString().trimmed();
-    if (text.isEmpty())
-        return;
-    QJsonObject message;
-    message["type"] = QStringLiteral("message");
-    message["text"] = text;
-    message["sender"] = sender->userName();
-    broadcast(message, sender);
+    }
+    if (typeVal.toString() == "message") {
+        const QJsonValue textVal = docObj.value(QLatin1String("text"));
+        if (textVal.isNull() || !textVal.isString())
+            return;
+        const QString text = textVal.toString().trimmed();
+        if (text.isEmpty())
+            return;
+        QJsonObject message;
+        message["type"] = QStringLiteral("message");
+        message["text"] = text;
+        message["sender"] = sender->userName();
+        broadcast(message, sender);
+    } else if (typeVal.toString() == "command") {
+        const QJsonValue actionVal = docObj.value("action");
+        if (actionVal.toString() == "move") {
+            sender->movePlayerLoc(docObj);
+            sendJson(sender, docObj);
+        }
+    }
 }
 
 

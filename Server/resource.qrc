@@ -1,5 +1,5 @@
 <RCC>
     <qresource prefix="/resources">
-        <file>SampleMap/alpha-1.png</file>
+        <file>json/creature.json</file>
     </qresource>
 </RCC>

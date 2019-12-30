@@ -2,8 +2,11 @@
 #define DATA_STRUCTS_H
 
 #include <QString>
+#include <QPair>
 #include <iostream>
 //#include "gear.h"
+
+typedef QPair<QString, QPair<int,int>> Location; // <map,<x,y>>
 
 struct Status_player {
   int userId;
@@ -26,6 +29,7 @@ struct Status_player {
   int ac;
   int crit;
   int block;
+  Location location;
 //  Gear mainhand;
 //  Gear offhand;
 //  Gear head;

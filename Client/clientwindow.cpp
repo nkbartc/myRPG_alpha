@@ -1,6 +1,7 @@
 #include "clientwindow.h"
 #include "ui_clientwindow.h"
 
+
 ClientWindow::ClientWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::ClientWindow)
@@ -26,6 +27,7 @@ ClientWindow::ClientWindow(QWidget *parent)
     connect(m_client, &Client::userJoined, this, &ClientWindow::userJoined);
     connect(m_client, &Client::userLeft, this, &ClientWindow::userLeft);
     connect(m_client, &Client::getPlayerStat, this, &ClientWindow::getPlayerStat);
+    connect(m_client, &Client::getPlayerLoc, this, &ClientWindow::getPlayerLoc);
     // connect the connect button to a slot that will attempt the connection
     connect(ui->pushButton_login, &QPushButton::clicked, this, &ClientWindow::attemptConnection);
     // connect the press of the enter while typing to the slot that sends the message
@@ -42,6 +44,19 @@ ClientWindow::~ClientWindow()
 // todo: update_XX_db
 void ClientWindow::update() {
 
+}
+
+void ClientWindow::setupMap(const QString map) {
+    // :/resources/SampleMap/alpha-1.png
+    qDebug() << map;
+    srcImage = QPixmap(":/resources/SampleMap/" + map + ".png");
+    qDebug() << "map width: " + QString::number(srcImage.width());
+    qDebug() << "map height " + QString::number(srcImage.height());
+    scene = new QGraphicsScene(this);
+    scene->addPixmap(srcImage);
+    scene->installEventFilter(this);
+    ui->graphicsView_map->setScene(scene);
+    ui->graphicsView_map->setAlignment(Qt::AlignTop|Qt::AlignLeft);
 }
 
 void ClientWindow::getPlayerStat(const QJsonObject &json) {
@@ -66,13 +81,19 @@ void ClientWindow::getPlayerStat(const QJsonObject &json) {
     ui->label_crit->setNum(json.value("crit").toInt());
     ui->label_block->setNum(json.value("block").toInt());
     // character's location
-//    int map_id = player_->status_.location.first;
-//    int loc_x = player_->status_.location.second.first;
-//    int loc_y = player_->status_.location.second.second;
-//    QString location = QString::number(map_id) + ":" +
-//                       QString::number(loc_x)  + "," +
-//                       QString::number(loc_y);
-//    ui->label_location->setText(location);
+    QString loc_map = json.value("loc_map").toString();
+    cur_x = json.value("loc_x").toInt();
+    cur_y = json.value("loc_y").toInt();
+    QString location = loc_map + ":" + QString::number(cur_x) + "," + QString::number(cur_y);
+    setupMap(loc_map);
+    ui->label_location->setText(location);
+}
+
+void ClientWindow::getPlayerLoc(const QString loc_x, const QString loc_y) {
+    QString location = "alpha-1:" + loc_x + "," + loc_y;
+    cur_x = loc_x.toInt();
+    cur_y = loc_y.toInt();
+    ui->label_location->setText(location);
 }
 
 void ClientWindow::update_bag_client() {
@@ -104,14 +125,14 @@ void ClientWindow::update_combat_log(QString report) {
   sb->setValue(sb->maximum());
 }
 
-void ClientWindow::on_pushButton_move_clicked()
-{
-  int map_index = ui->comboBox_selectMap->currentIndex() - 1;
-  QStringList temp_loation_list = ui->comboBox_selectStage->currentText().split(",");
-  int coord_x = temp_loation_list[0].toInt();
-  int coord_y = temp_loation_list[1].toInt();
-  QPair<int,int> location(coord_x, coord_y);
-}
+//void ClientWindow::on_pushButton_move_clicked()
+//{
+//  int map_index = ui->comboBox_selectMap->currentIndex() - 1;
+//  QStringList temp_loation_list = ui->comboBox_selectStage->currentText().split(",");
+//  int coord_x = temp_loation_list[0].toInt();
+//  int coord_y = temp_loation_list[1].toInt();
+//  QPair<int,int> location(coord_x, coord_y);
+//}
 
 void ClientWindow::on_pushButton_collect_clicked()
 {
@@ -152,19 +173,42 @@ void ClientWindow::setup_tiled_map() {
     ui->graphicsView_map->setAlignment(Qt::AlignTop|Qt::AlignLeft);
 }
 
-void ClientWindow::move_click() {
+//void ClientWindow::move_click() {
 
-}
+//}
 
 bool ClientWindow::eventFilter(QObject *target, QEvent *event) {
     if (target == scene) {
         if (event->type() == QEvent::GraphicsSceneMousePress) {
             QGraphicsSceneMouseEvent* me = static_cast<QGraphicsSceneMouseEvent*>(event);
             mouse_pos_map = me->scenePos();
-            qDebug() << "(" + QString::number(int(mouse_pos_map.x() / 48))
-                      + "," + QString::number(int(mouse_pos_map.y() / 48))
+            int click_x = int(mouse_pos_map.x() / 48);
+            int click_y = int(mouse_pos_map.y() / 48);
+            qDebug() << "(" + QString::number(click_x)
+                      + "," + QString::number(click_y)
                       + ")";
+            // pop a dialog to ask client whether to go or not.
+            QDialog dialog(this);
+            QFormLayout form(&dialog);
+            QString destination = "(" + QString::number(click_x) + "," + QString::number(click_y) + ")";
+            int estimated_time = abs(click_x - cur_x) + abs(click_y - cur_y);
+            form.addRow(new QLabel("Travel to: " + destination));
+            form.addRow(new QLabel("Estimated time: " + QString::number(estimated_time) + " sec"));
+            QDialogButtonBox buttonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel,
+                                       Qt::Horizontal, &dialog);
+            form.addRow(&buttonBox);
+            QObject::connect(&buttonBox, SIGNAL(accepted()), &dialog, SLOT(accept()));
+            QObject::connect(&buttonBox, SIGNAL(rejected()), &dialog, SLOT(reject()));
 
+            int ok_cancel = dialog.exec();
+            if (ok_cancel == QDialog::Accepted) {
+                QJsonObject command;
+                command["type"] = QStringLiteral("command");
+                command["action"] = "move";
+                command["loc_x"] = click_x;
+                command["loc_y"] = click_y;
+                m_client->sendCommand(command);
+            }
         }
     }
     return QMainWindow::eventFilter(target, event);

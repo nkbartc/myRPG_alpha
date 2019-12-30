@@ -28,6 +28,7 @@ public:
     Status_player get_status();
     int cur_hp;
     QString combat_report_;
+    void set_player_loc(QString loc_map, int loc_x, int loc_y);
 signals:
     void notify(QString yee);
 protected:

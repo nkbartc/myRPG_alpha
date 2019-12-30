@@ -16,8 +16,16 @@ void ServerWorker::initPlayer(const QJsonObject &json) {
     player = new Player(json);
 }
 
-void ServerWorker::getPlayerStat(const QJsonObject &json) {
+void ServerWorker::sendPlayerStat(const QJsonObject &json) {
 
+}
+
+// need to work on traveling timer
+void ServerWorker::movePlayerLoc(const QJsonObject &json) {
+    QString loc_map = "alpha-1";
+    int loc_x = json.value("loc_x").toInt();
+    int loc_y = json.value("loc_y").toInt();
+    player->set_player_loc(loc_map, loc_x, loc_y);
 }
 
 bool ServerWorker::setSocketDescriptor(qintptr socketDescriptor)
@@ -28,7 +36,6 @@ bool ServerWorker::setSocketDescriptor(qintptr socketDescriptor)
 void ServerWorker::sendJson(const QJsonObject &json)
 {
     QJsonObject status = json.value(QLatin1String("status")).toObject();
-    qDebug() << "character: " + status.value("class").toString();
     const QByteArray jsonData = QJsonDocument(json).toJson();
     emit logMessage("Sending to " + userName() + " - " + QString::fromUtf8(jsonData));
     QDataStream socketStream(m_serverSocket);
