@@ -37,39 +37,38 @@ Player::Player(const QJsonObject &json) {
     // status_gears implement them all later
 }
 
-//void Player::attack(Creature &creature) {
-//    double pure_dmg = this->status_.atk;
-//    int creature_def = creature.get_status().def;
-//    //  int real_dmg = (int)round(pure_dmg);
-//    int real_dmg = 5;
-//    creature.take_damage(real_dmg);
-//    QString mob_name = creature.get_name();
-//    combat_report_ += "Player causes " + QString::number(real_dmg) + " damages to " +
-//          mob_name + "(" + QString::number(creature.cur_hp) + ")\n";
-//    emit notify(combat_report_);
-//}
+void Player::attack(Creature &creature, QString &battle_report) {
+    double pure_dmg = this->status_.atk;
+    int creature_def = creature.get_status().def;
+    //  int real_dmg = (int)round(pure_dmg);
+    int real_dmg = 5;
+    creature.take_damage(real_dmg);
+    QString mob_name = creature.get_name();
+    battle_report += "Player causes " + QString::number(real_dmg) + " damages to " +
+          mob_name + "(" + QString::number(creature.cur_hp) + ")\n";
+}
 
 //void Player::attack(Player* player) {
 
 //}
 
-//void Player::take_damage(int dmg, QString creature_name) {
-//    cur_hp -= dmg;
-//    combat_report_+= "Player(" + QString::number(cur_hp) + ") takes " + QString::number(dmg) +
-//                   " damages from " + creature_name +"\n" ;
-//}
+void Player::take_damage(int dmg, QString creature_name, QString &battle_report) {
+    cur_hp -= dmg;
+    battle_report+= "Player(" + QString::number(cur_hp) + ") takes " + QString::number(dmg) +
+                   " damages from " + creature_name +"\n" ;
+}
 
-//void Player::set_cur_hp() {
-//    cur_hp = status_.hp;
-//}
+void Player::set_cur_hp() {
+    cur_hp = status_.hp;
+}
 
 //void Player::ding() {
 
 //}
 
-//Status_player Player::get_status() {
-//    return status_;
-//}
+Status_player Player::get_status() {
+    return status_;
+}
 
 void Player::set_player_loc(QString loc_map, int loc_x, int loc_y) {
     Location location = qMakePair(loc_map, qMakePair(loc_x, loc_y));

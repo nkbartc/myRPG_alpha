@@ -1,5 +1,8 @@
 <RCC>
     <qresource prefix="/resources">
         <file>SampleMap/alpha-1.png</file>
+        <file>toolbar/login.png</file>
+        <file>toolbar/logout.png</file>
+        <file>toolbar/signup.png</file>
     </qresource>
 </RCC>

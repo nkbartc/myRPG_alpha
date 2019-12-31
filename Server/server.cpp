@@ -14,6 +14,7 @@ Server::Server(QObject *parent)
     m_availableThreads.reserve(m_idealThreadCount);
     m_threadsLoad.reserve(m_idealThreadCount);
 
+    // open database
     QSqlDatabase mydb = QSqlDatabase::addDatabase("QSQLITE");
     mydb.setDatabaseName("C:/Users/nkbar/Documents/SQLite/myRPG.db");
     if(!mydb.open()) {
@@ -155,7 +156,44 @@ void Server::getCharacter(ServerWorker *sender, const int userId) {
     sendJson(sender, message);
 }
 
-int Server::checkUserInfo(ServerWorker *sender, const QString newUserName, const QString newPassWord) {
+bool Server::checkUserInfo_signup(ServerWorker *sender, const QString newUserName, const QString newPassWord) {
+    QSqlQuery qry;
+    if(qry.exec("select UserId from UserInfo where UserName='"+ newUserName + "'")) {
+        int count = 0;
+        while (qry.next()) {
+            count++;
+        }
+        if (count > 0) {
+            qDebug() << "Username already exists";
+            QJsonObject message;
+            message["type"] = QStringLiteral("signup");
+            message["success"] = false;
+            message["reason"] = QStringLiteral("Username already exists");
+            sendJson(sender, message);
+            return false;
+        }
+    }
+    if (newUserName.isEmpty()) {
+        return false;
+    }
+//    QString query = "INSERT INTO UserInfo (UserName, Password) values('" + newUserName + "','" + newPassWord + "')";
+//    if(!qry.exec(query)) {
+//        qDebug() << "error inserting account";
+//    }
+
+    qry.prepare("INSERT INTO UserInfo ("
+                "UserName,"
+                "Password)"
+                "VALUES (?,?);");
+    qry.addBindValue(newUserName);
+    qry.addBindValue(newPassWord);
+    if(!qry.exec()) {
+        qDebug() << "error inserting account";
+    }
+    return true;
+}
+
+int Server::checkUserInfo_login(ServerWorker *sender, const QString newUserName, const QString newPassWord) {
     QSqlQuery qry;
     if(qry.exec("select UserId from UserInfo where UserName='"+ newUserName +
                 "' and password='"+ newPassWord + "'")) {
@@ -207,9 +245,9 @@ int Server::checkUserInfo(ServerWorker *sender, const QString newUserName, const
     // not sure if this works correctly
     qry.first();
     int userId = qry.value(0).toInt();
-    qDebug() << "userId: " + QString::number(userId);
-    qDebug() << qry.value(1).toString();
-    qDebug() << qry.value(2).toString();
+//    qDebug() << "userId: " + QString::number(userId);
+//    qDebug() << qry.value(1).toString();
+//    qDebug() << qry.value(2).toString();
     return userId;
 }
 
@@ -219,7 +257,8 @@ void Server::jsonFromLoggedOut(ServerWorker *sender, const QJsonObject &docObj)
     const QJsonValue typeVal = docObj.value(QLatin1String("type"));
     if (typeVal.isNull() || !typeVal.isString())
         return;
-    if (typeVal.toString().compare(QLatin1String("login"), Qt::CaseInsensitive) != 0)
+    if (typeVal.toString().compare(QLatin1String("login"), Qt::CaseInsensitive) != 0 &&
+        typeVal.toString().compare(QLatin1String("signup"), Qt::CaseInsensitive) != 0)
         return;
     const QJsonValue usernameVal = docObj.value(QLatin1String("username"));
     const QJsonValue passwordVal = docObj.value(QLatin1String("password"));
@@ -228,11 +267,23 @@ void Server::jsonFromLoggedOut(ServerWorker *sender, const QJsonObject &docObj)
     const QString newUserName = usernameVal.toString().simplified();
     const QString newPassWord = passwordVal.toString().simplified();
 
-    int userId = checkUserInfo(sender, newUserName, newPassWord);
-    if (userId < 0) {
-        return;
+    if (typeVal.toString().compare(QLatin1String("login"), Qt::CaseInsensitive) == 0) {
+        int userId = checkUserInfo_login(sender, newUserName, newPassWord);
+        if (userId < 0) {
+            return;
+        }
+        getCharacter(sender, userId);
+    } else if (typeVal.toString().compare(QLatin1String("signup"), Qt::CaseInsensitive) == 0) {
+        bool result = checkUserInfo_signup(sender, newUserName, newPassWord);
+        if (!result) {
+            return;
+        }
+        QJsonObject message;
+        message["type"] = QStringLiteral("signup");
+        message["success"] = true;
+        sendJson(sender, message);
     }
-    getCharacter(sender, userId);
+
 }
 
 void Server::jsonFromLoggedIn(ServerWorker *sender, const QJsonObject &docObj)
@@ -259,7 +310,13 @@ void Server::jsonFromLoggedIn(ServerWorker *sender, const QJsonObject &docObj)
         if (actionVal.toString() == "move") {
             sender->movePlayerLoc(docObj);
             sendJson(sender, docObj);
+        } else if (actionVal.toString() == "fight") {
+            qDebug() << "server call worker to start a battle";
+            sender->battle(docObj);
         }
+    } else if (typeVal.toString() == "report") {
+        qDebug() << "server call sendJson to send report";
+        sendJson(sender, docObj);
     }
 }
 

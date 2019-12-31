@@ -11,6 +11,8 @@ ClientWindow::ClientWindow(QWidget *parent)
 {
     // set up of the .ui file
     ui->setupUi(this);
+    // set up toolbar
+    setupToolBar();
     // the model for the messages and players will have 1 column
     m_chatModel->insertColumn(0);
     m_playerModel->insertColumn(0);
@@ -21,6 +23,8 @@ ClientWindow::ClientWindow(QWidget *parent)
     connect(m_client, &Client::connected, this, &ClientWindow::connectedToServer);
     connect(m_client, &Client::loggedIn, this, &ClientWindow::loggedIn);
     connect(m_client, &Client::loginError, this, &ClientWindow::loginFailed);
+    connect(m_client, &Client::signedUp, this, &ClientWindow::signedUp);
+    connect(m_client, &Client::signUpError, this, &ClientWindow::signUpFailed);
     connect(m_client, &Client::messageReceived, this, &ClientWindow::messageReceived);
     connect(m_client, &Client::disconnected, this, &ClientWindow::disconnectedFromServer);
     connect(m_client, &Client::error, this, &ClientWindow::error);
@@ -28,8 +32,7 @@ ClientWindow::ClientWindow(QWidget *parent)
     connect(m_client, &Client::userLeft, this, &ClientWindow::userLeft);
     connect(m_client, &Client::getPlayerStat, this, &ClientWindow::getPlayerStat);
     connect(m_client, &Client::getPlayerLoc, this, &ClientWindow::getPlayerLoc);
-    // connect the connect button to a slot that will attempt the connection
-    connect(ui->pushButton_login, &QPushButton::clicked, this, &ClientWindow::attemptConnection);
+    connect(m_client, &Client::getBattleReport, this, &ClientWindow::getBattleReport);
     // connect the press of the enter while typing to the slot that sends the message
     connect(ui->lineEdit_chat, &QLineEdit::returnPressed, this, &ClientWindow::sendMessage);
 }
@@ -37,6 +40,24 @@ ClientWindow::ClientWindow(QWidget *parent)
 ClientWindow::~ClientWindow()
 {
     delete ui;
+}
+
+void ClientWindow::setupToolBar() {
+    QToolBar *accountToolBar = addToolBar(tr("Accout"));
+
+    const QIcon signupIcon = QIcon::fromTheme("account-signup", QIcon(":/resources/toolbar/signup.png"));
+    QAction *signupAct = new QAction(signupIcon, tr("&signup"), this);
+    accountToolBar->addAction(signupAct);
+
+    const QIcon loginIcon = QIcon::fromTheme("account-login", QIcon(":/resources/toolbar/login.png"));
+    QAction *loginAct = new QAction(loginIcon, tr("&login"), this);
+    connect(loginAct, &QAction::triggered, this, &ClientWindow::attemptConnection);
+    accountToolBar->addAction(loginAct);
+
+    const QIcon logoutIcon = QIcon::fromTheme("account-logout", QIcon(":/resources/toolbar/logout.png"));
+    QAction *logoutAct = new QAction(logoutIcon, tr("&logout"), this);
+    connect(logoutAct, &QAction::triggered, m_client, &Client::disconnectFromHost);
+    accountToolBar->addAction(logoutAct);
 }
 
 
@@ -96,65 +117,18 @@ void ClientWindow::getPlayerLoc(const QString loc_x, const QString loc_y) {
     ui->label_location->setText(location);
 }
 
+void ClientWindow::getBattleReport(const QString battleReport) {
+    ui->textBrowser_combat->setText(battleReport);
+}
+
 void ClientWindow::update_bag_client() {
 
-}
-
-void ClientWindow::update_map() {
-  qry_.exec("select Name from Map");
-  while (qry_.next()) {
-    ui->comboBox_selectMap->addItem(qry_.value("Name").toString());
-  }
-}
-
-void ClientWindow::update_stage(QString selected_map) {
-  ui->comboBox_selectStage->clear();
-  ui->comboBox_selectStage->addItem("Select Stage");
-  qry_.exec("select Id from Map where Name='"+ selected_map + "'");
-  qry_.next();
-  QString map_id = qry_.value(0).toString();
-  qry_.exec("select Location from Stage where Map_id='"+ map_id + "'");
-  while (qry_.next()) {
-    ui->comboBox_selectStage->addItem(qry_.value(0).toString());
-  }
 }
 
 void ClientWindow::update_combat_log(QString report) {
   ui->textBrowser_combat->setText(report);
   QScrollBar* sb = ui->textBrowser_combat->verticalScrollBar();
   sb->setValue(sb->maximum());
-}
-
-//void ClientWindow::on_pushButton_move_clicked()
-//{
-//  int map_index = ui->comboBox_selectMap->currentIndex() - 1;
-//  QStringList temp_loation_list = ui->comboBox_selectStage->currentText().split(",");
-//  int coord_x = temp_loation_list[0].toInt();
-//  int coord_y = temp_loation_list[1].toInt();
-//  QPair<int,int> location(coord_x, coord_y);
-//}
-
-void ClientWindow::on_pushButton_collect_clicked()
-{
-
-}
-
-void ClientWindow::on_pushButton_fight_clicked()
-{
-  int map_index = ui->comboBox_selectMap->currentIndex() - 1;
-  // no stage is selected. needs to handle this user error.
-  if (ui->comboBox_selectStage->currentIndex() == 0) {
-    return;
-  }
-  QStringList temp_loation_list = ui->comboBox_selectStage->currentText().split(",");
-  int coord_x = temp_loation_list[0].toInt();
-  int coord_y = temp_loation_list[1].toInt();
-  QPair<int,int> coord(coord_x, coord_y);
-}
-
-void ClientWindow::on_comboBox_selectMap_currentIndexChanged(const QString &arg1)
-{
-  update_stage(arg1);
 }
 
 void ClientWindow::on_pushButton_clear_combat_clicked()
@@ -173,10 +147,6 @@ void ClientWindow::setup_tiled_map() {
     ui->graphicsView_map->setAlignment(Qt::AlignTop|Qt::AlignLeft);
 }
 
-//void ClientWindow::move_click() {
-
-//}
-
 bool ClientWindow::eventFilter(QObject *target, QEvent *event) {
     if (target == scene) {
         if (event->type() == QEvent::GraphicsSceneMousePress) {
@@ -187,27 +157,41 @@ bool ClientWindow::eventFilter(QObject *target, QEvent *event) {
             qDebug() << "(" + QString::number(click_x)
                       + "," + QString::number(click_y)
                       + ")";
-            // pop a dialog to ask client whether to go or not.
             QDialog dialog(this);
             QFormLayout form(&dialog);
-            QString destination = "(" + QString::number(click_x) + "," + QString::number(click_y) + ")";
-            int estimated_time = abs(click_x - cur_x) + abs(click_y - cur_y);
-            form.addRow(new QLabel("Travel to: " + destination));
-            form.addRow(new QLabel("Estimated time: " + QString::number(estimated_time) + " sec"));
             QDialogButtonBox buttonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel,
                                        Qt::Horizontal, &dialog);
-            form.addRow(&buttonBox);
             QObject::connect(&buttonBox, SIGNAL(accepted()), &dialog, SLOT(accept()));
             QObject::connect(&buttonBox, SIGNAL(rejected()), &dialog, SLOT(reject()));
+            // pop a dialog to ask client whether to go or not.
+            if (click_x == cur_x && click_y == cur_y) {
+                form.addRow(new QLabel("Start the fight?"));
+                form.addRow(&buttonBox);
+                int ok_cancel = dialog.exec();
+                if (ok_cancel == QDialog::Accepted) {
+                    QJsonObject command;
+                    command["type"] = QStringLiteral("command");
+                    command["action"] = "fight";
+                    command["loc_x"] = click_x;
+                    command["loc_y"] = click_y;
+                    m_client->sendCommand(command);
+                }
+            } else {
+                QString destination = "(" + QString::number(click_x) + "," + QString::number(click_y) + ")";
+                int estimated_time = abs(click_x - cur_x) + abs(click_y - cur_y);
+                form.addRow(new QLabel("Travel to: " + destination));
+                form.addRow(new QLabel("Estimated time: " + QString::number(estimated_time) + " sec"));
+                form.addRow(&buttonBox);
 
-            int ok_cancel = dialog.exec();
-            if (ok_cancel == QDialog::Accepted) {
-                QJsonObject command;
-                command["type"] = QStringLiteral("command");
-                command["action"] = "move";
-                command["loc_x"] = click_x;
-                command["loc_y"] = click_y;
-                m_client->sendCommand(command);
+                int ok_cancel = dialog.exec();
+                if (ok_cancel == QDialog::Accepted) {
+                    QJsonObject command;
+                    command["type"] = QStringLiteral("command");
+                    command["action"] = "move";
+                    command["loc_x"] = click_x;
+                    command["loc_y"] = click_y;
+                    m_client->sendCommand(command);
+                }
             }
         }
     }
@@ -231,13 +215,58 @@ void ClientWindow::attemptConnection()
     m_client->connectToServer(QHostAddress(hostAddress), 22222);
 }
 
-void ClientWindow::connectedToServer() {
+void ClientWindow::signUp() {
     QDialog dialog(this);
     // Use a layout allowing to have a label next to each field
     QFormLayout form(&dialog);
 
-    // Add some text above the fields
-    form.addRow(new QLabel("Server health:"));
+    // Add the lineEdits with their respective labels
+    QList<QLineEdit *> fields;
+
+    QLineEdit *lineEdit1 = new QLineEdit(&dialog);
+    QString label1 = QString("Username");
+    form.addRow(label1, lineEdit1);
+    fields << lineEdit1;
+
+    QLineEdit *lineEdit2 = new QLineEdit(&dialog);
+    QString label2 = QString("Password");
+    form.addRow(label2, lineEdit2);
+    fields << lineEdit2;
+
+    QLineEdit *lineEdit3 = new QLineEdit(&dialog);
+    QString label3 = QString("Re-Password");
+    form.addRow(label3, lineEdit3);
+    fields << lineEdit3;
+
+    // Add some standard buttons (Cancel/Ok) at the bottom of the dialog
+    QDialogButtonBox buttonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel,
+                               Qt::Horizontal, &dialog);
+    form.addRow(&buttonBox);
+    QObject::connect(&buttonBox, SIGNAL(accepted()), &dialog, SLOT(accept()));
+    QObject::connect(&buttonBox, SIGNAL(rejected()), &dialog, SLOT(reject()));
+
+    // execute dialog and store user's decision
+    int ok_cancel = dialog.exec();
+
+    // ok -> attemptLogin
+    if (ok_cancel == QDialog::Accepted) {
+        // chick if password and Re-password are the same
+        QString password = fields.at(1)->text();
+        QString re_password = fields.at(2)->text();
+        if (password != re_password) {
+            QMessageBox::warning(this, tr("Error"),tr("Given passwords don't match!"));
+            // redirect user back to signup
+            signUp();
+        }
+        // try to register with the given username and password
+        attemptSignUp(fields);
+    }
+}
+
+void ClientWindow::connectedToServer() {
+    QDialog dialog(this);
+    // Use a layout allowing to have a label next to each field
+    QFormLayout form(&dialog);
 
     // Add the lineEdits with their respective labels
     QList<QLineEdit *> fields;
@@ -256,7 +285,9 @@ void ClientWindow::connectedToServer() {
     // Add some standard buttons (Cancel/Ok) at the bottom of the dialog
     QDialogButtonBox buttonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel,
                                Qt::Horizontal, &dialog);
-    form.addRow(&buttonBox);
+    QPushButton *signUpButton = new QPushButton("Sign Up", this);
+    connect(signUpButton, SIGNAL(clicked()), this, SLOT(signUp()));
+    form.addRow(&buttonBox, signUpButton);
     QObject::connect(&buttonBox, SIGNAL(accepted()), &dialog, SLOT(accept()));
     QObject::connect(&buttonBox, SIGNAL(rejected()), &dialog, SLOT(reject()));
 
@@ -266,17 +297,13 @@ void ClientWindow::connectedToServer() {
     // cancel -> disconnectFromHost
     if (ok_cancel == QDialog::Rejected) {
         m_client->disconnectFromHost();
-    }
-
-    // ok -> attemptLogin
-    else if (ok_cancel == QDialog::Accepted) {
-        // If the user didn't dismiss the dialog, do something with the fields
-        foreach(QLineEdit * lineEdit, fields) {
-            qDebug() << lineEdit->text();
-        }
+    } else if (ok_cancel == QDialog::Accepted) {
         // try to login with the given username and password
         attemptLogin(fields);
     }
+}
+void ClientWindow::attemptSignUp(const QList<QLineEdit *> &fields) {
+    m_client->signup(fields);
 }
 
 void ClientWindow::attemptLogin(const QList<QLineEdit *> &fields)
@@ -287,10 +314,11 @@ void ClientWindow::attemptLogin(const QList<QLineEdit *> &fields)
 
 void ClientWindow::loggedIn()
 {
-    // once we successully log in we disable the login button
-    ui->pushButton_login->setEnabled(false);
     // clear the user name record
     m_lastUserName.clear();
+
+    ui->lineEdit_chat->setEnabled(true);
+    ui->listView_chat->setEnabled(true);
 }
 
 void ClientWindow::loginFailed(const QString &reason)
@@ -300,6 +328,17 @@ void ClientWindow::loginFailed(const QString &reason)
     QMessageBox::critical(this, tr("Error"), reason);
 
     m_client->disconnectFromHost();
+}
+
+void ClientWindow::signedUp() {
+    QMessageBox::warning(this, tr("Success"),tr("You've successfully signed up!"));
+}
+void ClientWindow::signUpFailed(const QString &reason) {
+    QByteArray reason_temp = reason.toLocal8Bit();
+    const char *reason_tr = reason_temp.data();
+    QMessageBox::warning(this, tr("Error"),tr(reason_tr));
+    // redirect user back to signup
+    signUp();
 }
 
 void ClientWindow::messageReceived(const QString &sender, const QString &text)
@@ -363,8 +402,6 @@ void ClientWindow::disconnectedFromServer()
     // disable the ui to send and display messages
     ui->lineEdit_chat->setEnabled(false);
     ui->listView_chat->setEnabled(false);
-    // enable the button to connect to the server again
-    ui->pushButton_login->setEnabled(true);
     // reset the last printed username
     m_lastUserName.clear();
 }
@@ -467,8 +504,6 @@ void ClientWindow::error(QAbstractSocket::SocketError socketError)
     default:
         Q_UNREACHABLE();
     }
-    // enable the button to connect to the server again
-    ui->pushButton_login->setEnabled(true);
     // disable the ui to send and display messages
     ui->lineEdit_chat->setEnabled(false);
     ui->listView_chat->setEnabled(false);

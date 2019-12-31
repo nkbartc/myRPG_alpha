@@ -14,8 +14,8 @@ class Player;
 class Creature {
   public:
     Creature();
-    Creature(int id, int lv);
-    void attack(Player* player);
+    Creature(const QJsonObject &json, int lv);
+    void attack(Player* player, QString battle_report);
     void take_damage(int dmg);
     Status_creature get_status();
     QString get_name();

@@ -43,10 +43,9 @@ struct Status_player {
 };
 
 struct Status_creature {
-  int id;
-  QString name;
-  QString category;
   int lv;
+  QString name;
+//  QString category;
   int hp;
   int atk;
   int def;

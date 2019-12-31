@@ -6,7 +6,11 @@
 #include <QReadWriteLock>
 
 #include "player.h"
+#include "creature.h"
+#include "battle.h"
 class Player;
+class Creature;
+class Battle;
 class QJsonObject;
 class ServerWorker : public QObject
 {
@@ -21,6 +25,7 @@ public:
     void initPlayer(const QJsonObject &json);
     void sendPlayerStat(const QJsonObject &json);
     void movePlayerLoc(const QJsonObject &json);
+    void battle(const QJsonObject &json);
 public slots:
     void disconnectFromClient();
 private slots:
@@ -35,6 +40,8 @@ private:
     QString m_userName;
     mutable QReadWriteLock m_userNameLock;
     Player *player;
+    QJsonDocument creatureJDoc, mapJDoc;
+    QJsonObject creatureJObj, mapJObj;
 };
 
 #endif // SERVERWORKER_H

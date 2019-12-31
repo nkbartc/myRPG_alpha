@@ -11,12 +11,13 @@
 //#include "item.h"
 #include <QObject>
 
+class Creature;
 class Player {
 public:
     Player();
     Player(const QJsonObject &json);
-    void attack(Player* player);
-    void take_damage(int dmg, QString creature_name);  // may not need this since status setter
+    void attack(Creature &creature, QString &battle_report);
+    void take_damage(int dmg, QString creature_name, QString &battle_report);  // may not need this since status setter
     void set_cur_hp();  // this is called at begining and after a battle.
     void summarize();
     void ding();
@@ -38,7 +39,7 @@ protected:
 //    QMap<QString, QVector<Gear>> gearBag_;
 //    QMap<QString, QVector<Item>> itemBag_;
 public slots:
-    void attack(Creature &creature);
+//    void attack(Creature &creature);
 };
 
 #endif // PLAYER_H

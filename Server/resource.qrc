@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/resources">
         <file>json/creature.json</file>
+        <file>json/map.json</file>
     </qresource>
 </RCC>

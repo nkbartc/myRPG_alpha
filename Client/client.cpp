@@ -42,6 +42,22 @@ void Client::login(const QList<QLineEdit *> &fields)
     }
 }
 
+void Client::signup(const QList<QLineEdit *> &fields) {
+    if (m_clientSocket->state() == QAbstractSocket::ConnectedState) { // if the client is connected
+        // create a QDataStream operating on the socket
+        QDataStream clientStream(m_clientSocket);
+        // set the version so that programs compiled with different versions of Qt can agree on how to serialise
+        clientStream.setVersion(QDataStream::Qt_5_7);
+        // Create the JSON we want to send
+        QJsonObject message;
+        message["type"] = QStringLiteral("signup");
+        message["username"] = fields.at(0)->text();
+        message["password"] = fields.at(1)->text();
+        // send the JSON using QDataStream
+        clientStream << QJsonDocument(message).toJson(QJsonDocument::Compact);
+    }
+}
+
 void Client::sendCommand(const QJsonObject &command) {
     QDataStream clientStream(m_clientSocket);
     clientStream.setVersion(QDataStream::Qt_5_7);
@@ -144,6 +160,17 @@ void Client::jsonReceived(const QJsonObject &docObj)
             QString loc_x = QString::number(docObj.value("loc_x").toInt());
             QString loc_y = QString::number(docObj.value("loc_y").toInt());
             emit getPlayerLoc(loc_x, loc_y);
+        }
+    } else if (typeVal.toString().compare(QLatin1String("report"), Qt::CaseInsensitive) == 0) {
+        QString battleReport = docObj.value("battle").toString();
+        emit getBattleReport(battleReport);
+    } else if (typeVal.toString().compare(QLatin1String("signup"), Qt::CaseInsensitive) == 0) {
+        const bool signUpSuccess = docObj.value("success").toBool();
+        if (signUpSuccess) {
+            emit signedUp();
+        } else {
+            const QString reason = docObj.value("reason").toString();
+            emit signUpError(reason);
         }
     }
 }
