@@ -1,12 +1,9 @@
 <RCC>
     <qresource prefix="/resources">
-        <file>SampleMap/samplemap.png</file>
-        <file>SampleMap/samplemap.tmx</file>
-        <file>SampleMap/yee.png</file>
-        <file>SampleMap/samplemap_tiled.png</file>
-        <file>SampleMap/alpha.png</file>
-        <file>SampleMap/alpha.tmx</file>
-        <file>SampleMap/alpha_object.txt</file>
-        <file>SampleMap/alpha-2.png</file>
+        <file>SampleMap/alpha-1.png</file>
+        <file>toolbar/login.png</file>
+        <file>toolbar/logout.png</file>
+        <file>toolbar/signup.png</file>
+        <file>toolbar/landscape_rand1.png</file>
     </qresource>
 </RCC>

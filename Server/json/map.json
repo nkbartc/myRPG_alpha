@@ -1,0 +1,41 @@
+{
+    "alpha-1": {
+        "stage": {
+            "15,14": {
+                "mobs": ["spider"],
+                "exp" : 1
+            },
+            "20,10": {
+                "mobs": ["spider","rat"],
+                "exp" : 3
+            },
+            "25,4": {
+                "mobs": ["rat","wolf","wolf"],
+                "exp" : 8
+            },
+            "4,4": {
+                "mobs": ["rat","wolf"],
+                "exp" : 5
+            },
+            "13,25": {
+                "mobs": ["wolf","bear"],
+                "exp" : 8
+            },
+            "5,27": {
+                "mobs": ["bear","bear"],
+                "exp" : 10
+            },
+            "12,1": {
+                "mobs": ["bandit","bandit"],
+                "exp" : 8
+            },
+            "21,28": {
+                "mobs": ["bandit","bandit"],
+                "exp" : 12
+            }
+        },
+        "random_stage": {
+
+        }
+    }
+}

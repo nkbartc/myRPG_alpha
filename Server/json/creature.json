@@ -1,0 +1,67 @@
+{
+	"spider": {
+		"lv": 1,
+		"name": "Spider",
+		"hp": 10,
+		"atk": 1,
+		"def": 0,
+		"mdef": 0,
+		"speed": 1,
+		"dodge": 0,
+		"ac": 0,
+		"crit": 10,
+		"block": 0
+	},
+	"rat": {
+		"lv": 1,
+		"name": "Rat",
+		"hp": 12,
+		"atk": 2,
+		"def": 0,
+		"mdef": 0,
+		"speed": 3,
+		"dodge": 0,
+		"ac": 0,
+		"crit": 10,
+		"block": 0
+	},
+	"wolf": {
+		"lv": 1,
+		"name": "Wolf",
+		"hp": 20,
+		"atk": 4,
+		"def": 0,
+		"mdef": 0,
+		"speed": 5,
+		"dodge": 0,
+		"ac": 0,
+		"crit": 10,
+		"block": 0
+	},
+	"bear": {
+		"lv": 1,
+		"name": "Bear",
+		"hp": 40,
+		"atk": 10,
+		"def": 5,
+		"mdef": 0,
+		"speed": 2,
+		"dodge": 0,
+		"ac": 0,
+		"crit": 10,
+		"block": 0
+	},
+	"bandit": {
+		"lv": 1,
+		"name": "Bandit",
+		"hp": 25,
+		"atk": 6,
+		"def": 2,
+		"mdef": 0,
+		"speed": 3,
+		"dodge": 5,
+		"ac": 0,
+		"crit": 10,
+		"block": 0
+	}
+}

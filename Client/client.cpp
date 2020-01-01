@@ -5,6 +5,9 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonValue>
+#include <QJsonArray>
+
+#include <iostream>
 
 Client::Client(QObject *parent)
     : QObject(parent)
@@ -39,6 +42,28 @@ void Client::login(const QList<QLineEdit *> &fields)
     }
 }
 
+void Client::signup(const QList<QLineEdit *> &fields) {
+    if (m_clientSocket->state() == QAbstractSocket::ConnectedState) { // if the client is connected
+        // create a QDataStream operating on the socket
+        QDataStream clientStream(m_clientSocket);
+        // set the version so that programs compiled with different versions of Qt can agree on how to serialise
+        clientStream.setVersion(QDataStream::Qt_5_7);
+        // Create the JSON we want to send
+        QJsonObject message;
+        message["type"] = QStringLiteral("signup");
+        message["username"] = fields.at(0)->text();
+        message["password"] = fields.at(1)->text();
+        // send the JSON using QDataStream
+        clientStream << QJsonDocument(message).toJson(QJsonDocument::Compact);
+    }
+}
+
+void Client::sendCommand(const QJsonObject &command) {
+    QDataStream clientStream(m_clientSocket);
+    clientStream.setVersion(QDataStream::Qt_5_7);
+    clientStream << QJsonDocument(command).toJson();
+}
+
 void Client::sendMessage(const QString &text)
 {
     if (text.isEmpty())
@@ -64,6 +89,7 @@ void Client::jsonReceived(const QJsonObject &docObj)
 {
     // actions depend on the type of message
     const QJsonValue typeVal = docObj.value(QLatin1String("type"));
+    qDebug() << "type: " + typeVal.toString();
     if (typeVal.isNull() || !typeVal.isString())
         return; // a message with no type was received so we just ignore it
     if (typeVal.toString().compare(QLatin1String("login"), Qt::CaseInsensitive) == 0) { //It's a login message
@@ -77,6 +103,15 @@ void Client::jsonReceived(const QJsonObject &docObj)
         if (loginSuccess) {
             // we logged in succesfully and we notify it via the loggedIn signal
             emit loggedIn();
+            const QJsonValue allUserNamesVal = docObj.value(QLatin1String("allUserNames"));
+            const QJsonArray allUserNames_temp = allUserNamesVal.toArray();
+            QStringList allUserNames;
+            for (auto it = allUserNames_temp.begin(); it != allUserNames_temp.end(); ++it) {
+                allUserNames.push_back(it->toString());
+            }
+            const QJsonValue usernameVal = docObj.value(QLatin1String("username"));
+            // we notify of the new user via the userJoined signal
+            emit userJoined(usernameVal.toString(), allUserNames);
             return;
         }
         // the login attempt failed, we extract the reason of the failure from the JSON
@@ -99,8 +134,14 @@ void Client::jsonReceived(const QJsonObject &docObj)
         const QJsonValue usernameVal = docObj.value(QLatin1String("username"));
         if (usernameVal.isNull() || !usernameVal.isString())
             return; // the username was invalid so we ignore
+        const QJsonValue allUserNamesVal = docObj.value(QLatin1String("allUserNames"));
+        const QJsonArray allUserNames_temp = allUserNamesVal.toArray();
+        QStringList allUserNames;
+        for (auto it = allUserNames_temp.begin(); it != allUserNames_temp.end(); ++it) {
+            allUserNames.push_back(it->toString());
+        }
         // we notify of the new user via the userJoined signal
-        emit userJoined(usernameVal.toString());
+        emit userJoined(usernameVal.toString(), allUserNames);
     } else if (typeVal.toString().compare(QLatin1String("userdisconnected"), Qt::CaseInsensitive) == 0) { // A user left the chat
          // we extract the username of the new user
         const QJsonValue usernameVal = docObj.value(QLatin1String("username"));
@@ -108,6 +149,29 @@ void Client::jsonReceived(const QJsonObject &docObj)
             return; // the username was invalid so we ignore
         // we notify of the user disconnection the userLeft signal
         emit userLeft(usernameVal.toString());
+    } else if (typeVal.toString().compare(QLatin1String("charInfo"), Qt::CaseInsensitive) == 0) {
+        QJsonObject status = docObj.value(QLatin1String("status")).toObject();
+        emit getPlayerStat(status);
+    } else if (typeVal.toString().compare(QLatin1String("command"), Qt::CaseInsensitive) == 0) {
+        qDebug() << "receive command";
+        const QJsonValue actionVal = docObj.value("action");
+        if (actionVal.toString() == "move") {
+            qDebug() << "receive move command";
+            QString loc_x = QString::number(docObj.value("loc_x").toInt());
+            QString loc_y = QString::number(docObj.value("loc_y").toInt());
+            emit getPlayerLoc(loc_x, loc_y);
+        }
+    } else if (typeVal.toString().compare(QLatin1String("report"), Qt::CaseInsensitive) == 0) {
+        QString battleReport = docObj.value("battle").toString();
+        emit getBattleReport(battleReport);
+    } else if (typeVal.toString().compare(QLatin1String("signup"), Qt::CaseInsensitive) == 0) {
+        const bool signUpSuccess = docObj.value("success").toBool();
+        if (signUpSuccess) {
+            emit signedUp();
+        } else {
+            const QString reason = docObj.value("reason").toString();
+            emit signUpError(reason);
+        }
     }
 }
 
