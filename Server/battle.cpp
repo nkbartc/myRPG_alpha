@@ -3,7 +3,7 @@ Battle::Battle(){}
 
 Battle::Battle(Player* player, QVector<Creature> creatures) {
   player_ = player;
-  player->set_cur_hp();
+  player_->set_cur_hp();
   creatures_ = creatures;
   combat_ = 1;
   battle_report_ += "New battle created.\n";

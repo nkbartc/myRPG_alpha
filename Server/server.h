@@ -39,6 +39,7 @@ private:
     int checkUserInfo_login(ServerWorker *sender, const QString newUserName, const QString newPassWord);
     bool checkUserInfo_signup(ServerWorker *sender, const QString newUserName, const QString newPassWord);
     void getCharacter(ServerWorker *sender, const int userId);
+    bool newCharacter(QString newUserName);
 
 signals:
     void logMessage(const QString &msg);

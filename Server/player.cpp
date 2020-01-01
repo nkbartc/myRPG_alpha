@@ -19,7 +19,7 @@ Player::Player(const QJsonObject &json) {
     status_.fame = status.toObject().value("Fame").toInt();
     status_.gold = status.toObject().value("Gold").toInt();
     status_.diamond = status.toObject().value("Diamond").toInt();
-    status_.hp = status.toObject().value("Hp").toInt();
+    status_.hp = status.toObject().value("hp").toInt();
     status_.atk = status.toObject().value("Atk").toInt();
     status_.def = status.toObject().value("Def").toInt();
     status_.mdef = status.toObject().value("MDef").toInt();

@@ -67,7 +67,7 @@ void ServerWorker::battle(const QJsonObject &json) {
     }
     // setup a battle
     Battle new_battle(player, mobs);
-    // now battle
+    // now battle; need to redesign how battle works later
     while(new_battle.is_battle()) {
         new_battle.update();
     }

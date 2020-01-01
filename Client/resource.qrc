@@ -4,5 +4,6 @@
         <file>toolbar/login.png</file>
         <file>toolbar/logout.png</file>
         <file>toolbar/signup.png</file>
+        <file>toolbar/landscape_rand1.png</file>
     </qresource>
 </RCC>

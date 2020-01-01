@@ -13,6 +13,8 @@ ClientWindow::ClientWindow(QWidget *parent)
     ui->setupUi(this);
     // set up toolbar
     setupToolBar();
+    // set up background
+//    setupBackground();
     // the model for the messages and players will have 1 column
     m_chatModel->insertColumn(0);
     m_playerModel->insertColumn(0);
@@ -40,6 +42,14 @@ ClientWindow::ClientWindow(QWidget *parent)
 ClientWindow::~ClientWindow()
 {
     delete ui;
+}
+
+void ClientWindow::setupBackground() {
+    QPixmap background(":/resources/toolbar/landscape_rand1.png");
+//    background = background.scaled(this->size(), Qt::IgnoreAspectRatio);
+    QPalette palette;
+    palette.setBrush(QPalette::Background, background);
+    this->setPalette(palette);
 }
 
 void ClientWindow::setupToolBar() {
@@ -229,11 +239,13 @@ void ClientWindow::signUp() {
     fields << lineEdit1;
 
     QLineEdit *lineEdit2 = new QLineEdit(&dialog);
+    lineEdit2->setEchoMode(QLineEdit::Password);
     QString label2 = QString("Password");
     form.addRow(label2, lineEdit2);
     fields << lineEdit2;
 
     QLineEdit *lineEdit3 = new QLineEdit(&dialog);
+    lineEdit3->setEchoMode(QLineEdit::Password);
     QString label3 = QString("Re-Password");
     form.addRow(label3, lineEdit3);
     fields << lineEdit3;
@@ -277,6 +289,7 @@ void ClientWindow::connectedToServer() {
     fields << lineEdit1;
 
     QLineEdit *lineEdit2 = new QLineEdit(&dialog);
+    lineEdit2->setEchoMode(QLineEdit::Password);
     QString label2 = QString("Password");
     form.addRow(label2, lineEdit2);
     fields << lineEdit2;

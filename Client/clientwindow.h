@@ -80,6 +80,7 @@ private slots:
     void setupMap(const QString map);
 
 private:
+    void setupBackground();
     void setupToolBar();
     Ui::ClientWindow *ui;
     Client *m_client;

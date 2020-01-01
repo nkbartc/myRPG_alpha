@@ -110,11 +110,11 @@ void Server::stopServer()
 
 void Server::getCharacter(ServerWorker *sender, const int userId) {
     QSqlQuery qry;
-    qry.exec("select CharacterId from Character where UserId='"+ QString::number(userId) + "'");
-    qry.next();
-    // assume always the first character for testing.
-    QString charId = qry.value(0).toString();
-    qry.exec("select * from Character where CharacterId='"+ charId + "'");
+//    qry.exec("select CharacterId from Character where UserId='"+ QString::number(userId) + "'");
+//    qry.next();
+//    // assume always the first character for testing.
+//    QString charId = qry.value(0).toString();
+    qry.exec("select * from Character where UserId='"+ QString::number(userId) + "'");
     qry.next();
     QJsonObject message;
     QJsonObject status;
@@ -156,6 +156,80 @@ void Server::getCharacter(ServerWorker *sender, const int userId) {
     sendJson(sender, message);
 }
 
+bool Server::newCharacter(QString newUserName) {
+    QSqlQuery qry;
+    if(qry.exec("select UserId from UserInfo where UserName='"+ newUserName + "'")) {
+        int count = 0;
+        while (qry.next()) {
+            count++;
+        }
+        if (count < 1) {
+            qDebug() << "Cannot find your account";
+            QJsonObject message;
+            message["type"] = QStringLiteral("login");
+            message["success"] = false;
+            message["reason"] = QStringLiteral("Username or Password is incorrect");
+            return false;
+        }
+    }
+    qry.first();
+    int userId = qry.value(0).toInt();
+    qry.prepare("INSERT INTO Character ("
+                "UserId,"
+                "CharacterId,"
+                "Class,"
+                "Name,"
+                "Time,"
+                "Lv,"
+                "Exp,"
+                "Req_Exp,"
+                "Fame,"
+                "Gold,"
+                "Diamond,"
+                "Hp,"
+                "Atk,"
+                "Def,"
+                "MDef,"
+                "Speed,"
+                "Dodge,"
+                "Ac,"
+                "Crit,"
+                "Block,"
+                "Loc_map,"
+                "Loc_x,"
+                "Loc_y)"
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);");
+    // all new characters are warriors for now
+    qry.addBindValue(userId); // UserId
+    // all user have only 1 character for now
+    qry.addBindValue(1); // CharacterId
+    qry.addBindValue("Warrior"); // Class
+    qry.addBindValue(newUserName); // Name
+    qry.addBindValue(0); // Time
+    qry.addBindValue(1); // Lv
+    qry.addBindValue(0); // Exp
+    qry.addBindValue(2); // Req_Exp
+    qry.addBindValue(0); // Fame
+    qry.addBindValue(0); // Gold
+    qry.addBindValue(0); // Diamond
+    qry.addBindValue(30); // Hp
+    qry.addBindValue(5); // Atk
+    qry.addBindValue(0); // Def
+    qry.addBindValue(0); // MDef
+    qry.addBindValue(1); // Speed
+    qry.addBindValue(0); // Dodge
+    qry.addBindValue(0); // Ac
+    qry.addBindValue(0); // Crit
+    qry.addBindValue(0); // Block
+    qry.addBindValue("alpha-1"); // Loc_map
+    qry.addBindValue(15); // Loc_x
+    qry.addBindValue(15); // Loc_y
+    if(!qry.exec()) {
+        return false;
+    }
+    return true;
+}
+
 bool Server::checkUserInfo_signup(ServerWorker *sender, const QString newUserName, const QString newPassWord) {
     QSqlQuery qry;
     if(qry.exec("select UserId from UserInfo where UserName='"+ newUserName + "'")) {
@@ -176,10 +250,6 @@ bool Server::checkUserInfo_signup(ServerWorker *sender, const QString newUserNam
     if (newUserName.isEmpty()) {
         return false;
     }
-//    QString query = "INSERT INTO UserInfo (UserName, Password) values('" + newUserName + "','" + newPassWord + "')";
-//    if(!qry.exec(query)) {
-//        qDebug() << "error inserting account";
-//    }
 
     qry.prepare("INSERT INTO UserInfo ("
                 "UserName,"
@@ -188,7 +258,20 @@ bool Server::checkUserInfo_signup(ServerWorker *sender, const QString newUserNam
     qry.addBindValue(newUserName);
     qry.addBindValue(newPassWord);
     if(!qry.exec()) {
-        qDebug() << "error inserting account";
+        QJsonObject message;
+        message["type"] = QStringLiteral("signup");
+        message["success"] = false;
+        message["reason"] = QStringLiteral("Failed to sign up");
+        sendJson(sender, message);
+        return false;
+    }
+    if (!newCharacter(newUserName)) {
+        QJsonObject message;
+        message["type"] = QStringLiteral("signup");
+        message["success"] = false;
+        message["reason"] = QStringLiteral("Failed to new character");
+        sendJson(sender, message);
+        return false;
     }
     return true;
 }
@@ -264,6 +347,7 @@ void Server::jsonFromLoggedOut(ServerWorker *sender, const QJsonObject &docObj)
     const QJsonValue passwordVal = docObj.value(QLatin1String("password"));
     if (usernameVal.isNull() || !usernameVal.isString())
         return;
+
     const QString newUserName = usernameVal.toString().simplified();
     const QString newPassWord = passwordVal.toString().simplified();
 
